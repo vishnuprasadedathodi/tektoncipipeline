@@ -1,0 +1,57 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: kaniko-build
+spec:
+  workspaces:
+    - name: output
+    - name: docker-credentials
+      mountPath: /kaniko/.docker
+    - name: aws-secret
+      mountPath: /root/.aws
+  params:
+   - name: DOCKERFILE
+     type: string
+   - name: IMAGE
+     type: string
+  steps:
+    - name: ecr-login
+      image: "docker.io/amazon/aws-cli:2.0.52@sha256:1506cec98a7101c935176d440a14302ea528b8f92fcaf4a6f1ea2d7ecef7edc4"
+      script: |
+        #!/usr/bin/env sh
+        aws ecr get-login-password --region us-east-1
+    - name: copy-jar
+      image: ubuntu
+      script: |
+        #!/usr/bin/env sh
+        ls /workspace/output/target/
+        cp /workspace/output/target/*.jar /workspace/output/
+        ls /workspace/output/
+    - name: build-and-push
+      image: gcr.io/kaniko-project/executor:v1.7.0
+      workingDir: /workspace/output
+      env:
+        - name: DOCKER_CONFIG
+          value: /tekton/home/.docker
+        - name: DOCKERFILE
+          value: $(params.DOCKERFILE)
+        - name: IMAGE
+          value: $(params.IMAGE)
+      command:
+        - /kaniko/executor
+      args:
+        - --context
+        - $(workspaces.output.path)
+        - --dockerfile
+        - $(params.DOCKERFILE)
+        - --destination
+        - $(params.IMAGE)
+      # volumeMounts:
+      #   - name: docker-credentials
+      #     mountPath: /kaniko/.docker
+      #   - name: aws-secret
+      #     mountPath: /root/.aws
+
+
+
+

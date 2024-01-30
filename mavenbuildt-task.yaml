@@ -1,0 +1,21 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: maven-task
+spec:
+  workspaces:
+    - name: output
+
+  params:
+    - name: GOALS
+      description: The Maven goals to run
+      type: array
+      default: ["package"]
+  steps:
+    - name: mvn
+      image: gcr.io/cloud-builders/mvn
+      workingDir: /workspace/output
+      command: ["/usr/bin/mvn"]
+      args:
+        - -Dmaven.repo.local=$(workspaces.output.path)
+        - "$(inputs.params.GOALS)"

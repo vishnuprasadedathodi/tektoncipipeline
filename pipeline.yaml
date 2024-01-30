@@ -1,0 +1,77 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: poc-maven-sample-app-pipeline
+spec:
+  description: | 
+    This pipeline clones a git repo, then echoes the README file to the stout.
+  params:
+  - name: repo-url
+    type: string
+    description: The git repo URL to clone from.
+  workspaces:
+  - name: shared-data
+    description: | 
+      This workspace contains the cloned repo files, so they can be read by the
+      next task.
+  - name: docker-credentials
+  - name: aws-secret
+  tasks:
+  - name: checkout
+    taskRef:
+      name: git-clone-task
+    workspaces:
+    - name: output
+      workspace: shared-data
+    params:
+    - name: url
+      value: $(params.repo-url)
+
+  - name: maven-build
+    taskRef:
+      name: maven-task
+    runAfter: ["checkout"]
+    params:
+    - name: GOALS
+      value: ["install"]
+    workspaces:
+    - name: output
+      workspace: shared-data
+
+  - name: maven-package
+    taskRef:
+      name: maven-task
+    runAfter: ["maven-build"]
+    params:
+    - name: GOALS
+      value: ["package"]
+    workspaces:
+    - name: output
+      workspace: shared-data
+
+  # - name: docker-build
+  #   taskRef:
+  #     name: dockerbuild-task
+  #   runAfter: ["maven-package"]
+  #   workspaces:
+  #   - name: output
+  #     workspace: shared-data
+
+  - name: build-and-push
+    taskRef:
+      name: kaniko-build
+    runAfter: ["maven-package"]
+    workspaces:
+    - name: output
+      workspace: shared-data
+    - name: docker-credentials
+      workspace: docker-credentials
+    - name: aws-secret
+      workspace: aws-secret
+    params:
+      - name: DOCKERFILE
+        value: /workspace/output/Dockerfile
+      - name: CONTEXT
+        value: /workspace/output
+      - name: IMAGE
+        value: 682452625784.dkr.ecr.us-east-1.amazonaws.com/mavensample-app-tekton:latest

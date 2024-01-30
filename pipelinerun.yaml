@@ -1,0 +1,31 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: poc-maven-sample-app-v1
+spec:
+  serviceAccountName: tekton-poc-git-credential
+  pipelineRef:
+    name: poc-maven-sample-app-pipeline
+  workspaces:
+    - name: shared-data
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 2Gi
+    - name: docker-credentials
+      secret:
+        secretName: docker-credentials
+    - name: aws-secret
+      secret:
+        secretName: aws-secret
+  params:
+    - name: repo-url
+      value: git@github.com:vishnuedathodi/eh_phase3_argocd_poc.git
+  podTemplate:
+    affinity:
+      nodeAffinity: null
+      podAffinity: null
+

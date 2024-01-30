@@ -1,0 +1,17 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: git-clone-task-run-v1
+spec:
+  serviceAccountName: tekton-poc-git-credential
+  taskRef:
+    name: git-clone-task
+  computeResources:
+    requests:
+      cpu: 1 
+    limits:
+      cpu: 2    
+  params:
+    - name: url
+      value:
+        url: "https://gitlab.ustpace.com/dagility-testing/eh_sampleapp_p3.git"
